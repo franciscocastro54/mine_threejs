@@ -8189,6 +8189,43 @@
     Sensibilidad<br/>
     <input type="range" id="sensitivity-slider" min="0.5" max="3" value="1.5" step="0.1">
   </div>
+
+  <div id="mobile-keyboard">
+    <button data-move="forward">↑</button>
+    <div>
+      <button data-move="left">←</button>
+      <button data-move="backward">↓</button>
+      <button data-move="right">→</button>
+    </div>
+    <div>
+      <button data-move="up">Q</button>
+      <button data-move="down">E</button>
+      <button id="shiftBtn">Shift</button>
+    </div>
+  </div>
+
+  <style>
+    #mobile-keyboard {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      user-select: none;
+    }
+    #mobile-keyboard button {
+      width: 60px;
+      height: 60px;
+      font-size: 20px;
+      background-color: rgba(0,0,0,0.6);
+      color: white;
+      border: none;
+      border-radius: 10px;
+    }
+  </style>
+
 </body>
 
 </html>
