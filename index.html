@@ -1,66 +1,65 @@
-<!DOCTYPE html>
-<html lang="en">
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #f0f0f0;
+  }
 
-<head>
-  <title>three.js - voxel FPS con ocean shader</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: #f0f0f0;
-    }
+  #blocker {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    z-index: 100;
+  }
 
-    #blocker {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 20px;
-      z-index: 100;
-    }
+  #instructions {
+    text-align: center;
+    max-width: 600px;
+  }
 
-    #instructions {
-      text-align: center;
-      max-width: 600px;
-    }
+  #copyBtn,
+  #addCubeBtn,
+  #jumpBtn {
+    position: fixed;
+    z-index: 200;
+    padding: 10px 15px;
+    font-size: 14px;
+    background: #08f;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
 
-    #copyBtn,
-    #addCubeBtn {
-      position: fixed;
-      z-index: 200;
-      padding: 10px 15px;
-      font-size: 14px;
-      background: #08f;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
+  #copyBtn {
+    top: 10px;
+    right: 10px;
+  }
 
-    #copyBtn {
-      top: 10px;
-      right: 10px;
-    }
+  #addCubeBtn {
+    bottom: 20px;
+    right: 20px;
+  }
 
-    #addCubeBtn {
-      bottom: 20px;
-      right: 20px;
-    }
+  #jumpBtn {
+    bottom: 80px;
+    right: 20px;
+  }
 
-    #joystickContainer {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      z-index: 200;
-    }
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
+  #joystickContainer {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    z-index: 200;
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
 </head>
 
 <body>
@@ -75,6 +74,7 @@
   </div>
   <button id="copyBtn">Copiar coordenadas</button>
   <button id="addCubeBtn">➕ Cubo</button>
+  <button id="jumpBtn">⬆️ Saltar</button>
   <div id="joystickContainer"></div>
 
   <script type="importmap">
@@ -211,6 +211,8 @@
       water.material.uniforms['sunDirection'].value.copy(sun).normalize();
     }
 
+    let lookSensitivity = 0.002; // sensibilidad configurable
+
     function setupMobileControls() {
       const joystick = nipplejs.create({
         zone: document.getElementById('joystickContainer'),
@@ -239,6 +241,31 @@
           voxel.position.copy(snapped);
           scene.add(voxel);
           objects.push(voxel);
+        }
+      });
+
+      document.getElementById('jumpBtn').addEventListener('click', () => {
+        velocity.y += 300; // salto
+      });
+
+      let lastTouch = null;
+      document.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          lastTouch = e.touches[0];
+        }
+      });
+
+      document.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1 && lastTouch) {
+          const touch = e.touches[0];
+          const dx = touch.clientX - lastTouch.clientX;
+          const dy = touch.clientY - lastTouch.clientY;
+
+          controls.getObject().rotation.y -= dx * lookSensitivity;
+          camera.rotation.x -= dy * lookSensitivity;
+          camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+
+          lastTouch = touch;
         }
       });
     }
