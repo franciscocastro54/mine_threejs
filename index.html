@@ -395,6 +395,39 @@
       // 6️⃣ Creamos el voxel (createVoxelAt evita duplicados)
       createVoxelAt(pos);
     }
+
+
+    /* ---------- PLACEHOLDER MÓVIL ---------- */
+    function updateRollOverMobile() {
+      // Rayo desde el centro de pantalla
+      pointer.set(0, 0);
+      raycaster.setFromCamera(pointer, camera);
+
+      // Incluimos el plano-suelo para no “fallar”
+      const hit = raycaster.intersectObjects(objects.concat(plane), false)[0];
+
+      let pos;
+      if (hit) {
+        // Cara golpeada → desplazar media celda en la normal
+        pos = hit.point
+          .clone()
+          .addScaledVector(hit.face.normal, voxelSize / 2 + 0.01);
+        pos = snap(pos);
+      } else {
+        // Nada delante (mirando al cielo) → 2 celdas frente a la cámara
+        const dir = new THREE.Vector3();
+        camera.getWorldDirection(dir);
+        pos = snap(
+          camera.position.clone().addScaledVector(dir, voxelSize * 2)
+        );
+      }
+
+      // Nunca por debajo del suelo
+      pos.y = Math.max(pos.y, voxelSize / 2);
+
+      rollOverMesh.position.copy(pos);
+    }
+
     /* ----- JOYSTICKS ----- */
     function setupMobileJoysticks() {
       const lBase = document.getElementById('left-joystick'), lKnob = document.getElementById('left-knob');
@@ -507,6 +540,8 @@
         camera.position.x = THREE.MathUtils.clamp(camera.position.x, -500, 500);
         camera.position.z = THREE.MathUtils.clamp(camera.position.z, -500, 500);
         camera.position.y = THREE.MathUtils.clamp(camera.position.y, 2, 150);
+
+        updateRollOverMobile();
       }
 
       if (water) water.material.uniforms.time.value += dt;
