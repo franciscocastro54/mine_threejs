@@ -6,156 +6,108 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: #f0f0f0;
-    }
+    body { margin: 0; overflow: hidden; background: #f0f0f0; }
 
-    /* Simple crosshair */
+    /* Crosshair */
     #crosshair {
-      position: absolute;
-      top: 50%;
-      left: 50%;
+      position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 10px;
-      height: 10px;
-      border: 2px solid rgba(255, 255, 255, 0.8);
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 5;
+      width: 10px; height: 10px;
+      border: 2px solid rgba(255,255,255,.8);
+      border-radius: 50%; pointer-events: none; z-index: 5;
     }
 
-    .hidden {
-      display: none !important;
-    }
+    .hidden { display: none !important; }
 
     /* Joysticks */
     .joystick {
-      position: fixed;
-      width: 120px;
-      height: 120px;
-      background: rgba(0, 0, 0, .35);
-      border: 2px solid rgba(255, 255, 255, .5);
-      border-radius: 50%;
-      touch-action: none;
-      user-select: none;
+      position: fixed; width: 120px; height: 120px;
+      background: rgba(0,0,0,.35);
+      border: 2px solid rgba(255,255,255,.5);
+      border-radius: 50%; touch-action: none; user-select: none;
     }
-
-    #left-joystick {
-      left: 20px;
-      bottom: 20px;
-    }
-
-    #right-joystick {
-      right: 20px;
-      bottom: 20px;
-    }
-
+    #left-joystick { left: 20px; bottom: 20px; }
+    #right-joystick { right: 20px; bottom: 20px; }
     .knob {
-      position: absolute;
-      width: 60px;
-      height: 60px;
-      background: rgba(255, 255, 255, .7);
-      border-radius: 50%;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      position: absolute; width: 60px; height: 60px;
+      background: rgba(255,255,255,.7); border-radius: 50%;
+      top: 50%; left: 50%; transform: translate(-50%,-50%);
       pointer-events: none;
     }
 
+    /* Overlay desktop */
     #blocker {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, .5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 20px;
-      z-index: 100;
+      position: absolute; width: 100%; height: 100%;
+      background: rgba(0,0,0,.5);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 20px; z-index: 100;
     }
-
-    #instructions {
-      text-align: center;
-      max-width: 600px;
-    }
+    #instructions { text-align: center; max-width: 600px; }
 
     #copyBtn {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      z-index: 200;
-      padding: 10px 15px;
-      font-size: 14px;
-      background: #08f;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+      position: fixed; top: 10px; right: 10px; z-index: 200;
+      padding: 10px 15px; font-size: 14px;
+      background: #08f; color: #fff; border: none;
+      border-radius: 5px; cursor: pointer;
     }
 
-    /* Mobile-only cube button */
+    /* Botón “Añadir cubo” solo móvil */
     #addCubeBtn {
-      position: fixed;
-      bottom: 140px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 120px;
-      height: 120px;
-      border-radius: 60px;
-      background: #08f;
-      color: #fff;
-      font-size: 16px;
-      border: none;
-      z-index: 300;
-      cursor: pointer;
-      user-select: none;
-      touch-action: manipulation;
+      position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%);
+      width: 120px; height: 120px; border-radius: 60px;
+      background: #08f; color: #fff; font-size: 16px;
+      border: none; z-index: 300; cursor: pointer;
+      user-select: none; touch-action: manipulation;
     }
 
-    /* Mobile Y‑axis buttons */
-    #btnUp,
-    #btnDown {
-      position: fixed;
-      right: 20px;
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: #08f;
-      color: #fff;
-      font-size: 28px;
-      border: none;
-      z-index: 300;
-      user-select: none;
-      touch-action: manipulation;
+    /* ↑ / ↓ en eje Y */
+    .yBtn {
+      position: fixed; right: 20px;
+      width: 100px; height: 60px;
+      background: #08f; color: #fff; font-size: 18px;
+      border: none; border-radius: 10px;
+      z-index: 300; user-select: none; touch-action: manipulation;
     }
-
-    #btnUp {
-      bottom: 200px;
-    }
-
-    #btnDown {
-      bottom: 130px;
-    }
+    #upBtn   { bottom: 180px; }  /* encima del joystick derecho */
+    #downBtn { bottom: 250px; }  /* un poco más arriba */
   </style>
 </head>
 
 <body>
   <div id="crosshair"></div>
+
+  <!-- Joystick container -->
   <div id="joystick-container" class="hidden">
-    <div id="left-joystick" class="joystick"><div id="left-knob" class="knob"></div></div>
+    <div id="left-joystick"  class="joystick"><div id="left-knob"  class="knob"></div></div>
     <div id="right-joystick" class="joystick"><div id="right-knob" class="knob"></div></div>
   </div>
-  <div id="blocker"><div id="instructions"><p><b>Haz clic para comenzar</b></p><p>W A S D para moverse, mouse para mirar</p><p>Click: añadir cubo, Shift+Click: eliminar cubo</p><p>Q / E para subir/bajar</p><p>ESC pausa/configuración</p></div></div>
-  <button id="copyBtn">Copiar coordenadas</button>
-  <!-- Botones visibles sólo en móvil -->
-  <button id="addCubeBtn" class="hidden">Añadir&nbsp;Cubo</button>
-  <button id="btnUp" class="hidden">↑</button>
-  <button id="btnDown" class="hidden">↓</button>
 
-  <script type="importmap">{"imports":{"three":"./build/three.module.js","three/addons/":"./jsm/"}}</script>
+  <!-- Overlay desktop -->
+  <div id="blocker">
+    <div id="instructions">
+      <p><b>Haz clic para comenzar</b></p>
+      <p>W A S D para moverse, mouse para mirar</p>
+      <p>Click: añadir cubo, Shift+Click: eliminar cubo</p>
+      <p>Q / E para subir/bajar</p>
+      <p>ESC pausa/configuración</p>
+    </div>
+  </div>
+
+  <button id="copyBtn">Copiar coordenadas</button>
+
+  <!-- Botones móviles -->
+  <button id="addCubeBtn" class="hidden">Añadir&nbsp;Cubo</button>
+  <button id="upBtn"   class="yBtn hidden">↑ Y</button>
+  <button id="downBtn" class="yBtn hidden">↓ Y</button>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./build/three.module.js",
+        "three/addons/": "./jsm/"
+      }
+    }
+  </script>
 
   <script type="module">
     import * as THREE from 'three';
@@ -164,12 +116,12 @@
     import { Sky } from 'three/addons/objects/Sky.js';
     import GUI from 'https://cdn.jsdelivr.net/npm/lil-gui@0.19/+esm';
 
-    /* ----- CONSTANTS & GLOBALS ----- */
+    /* ----- CONSTANTES & GLOBALES ----- */
     const voxelSize = 20;
-    const moveFlags = { forward: false, backward: false, left: false, right: false, up: false, down: false };
+    const moveFlags = { forward:false, backward:false, left:false, right:false, up:false, down:false };
     const velocity = new THREE.Vector3();
-    const DESKTOP_SPEED = 6000;
-    const MOBILE_SPEED = 6000;
+    const DESKTOP_SPEED = 10000;
+    const MOBILE_SPEED  = 300;
 
     const isMobile = window.matchMedia('(pointer: coarse)').matches;
     const clock = new THREE.Clock();
@@ -182,23 +134,24 @@
     let water, sky, sun;
     const sunParams = { elevation: 2, azimuth: 180 };
 
-    let mobileMoveX = 0, mobileMoveZ = 0, mobileMoveY = 0;
+    /* Movimiento móvil */
+    let mobileMoveX = 0, mobileMoveZ = 0;
     let mobileYawDelta = 0, mobilePitchDelta = 0;
+    let mobileMoveY = 0;                // ← nuevo
     let yaw = 0, pitch = 0;
 
-    /* Textures */
+    /* Texturas */
     const tl = new THREE.TextureLoader();
     const textures = {
-      arena: tl.load('textures/textura_arena.png'),
-      madera: tl.load('textures/textura_wood.jpg'),
-      hojas: tl.load('textures/textura_hojas.png'),
-      blanco: tl.load('textures/textura_piso.jpg'),
-      negro: tl.load('textures/textura_tec_negra.png'),
-      ladrillo: tl.load('textures/textura_brick_2.jpg')
+      arena:   tl.load('textures/textura_arena.png'),
+      madera:  tl.load('textures/textura_wood.jpg'),
+      hojas:   tl.load('textures/textura_hojas.png'),
+      blanco:  tl.load('textures/textura_piso.jpg'),
+      negro:   tl.load('textures/textura_tec_negra.png'),
+      ladrillo:tl.load('textures/textura_brick_2.jpg')
     };
     Object.values(textures).forEach(t => t.colorSpace = THREE.SRGBColorSpace);
 
-    /* Params for GUI */
     const cubeParams = { textura: 'madera' };
 
     /* ----- INIT & MAIN ----- */
@@ -206,371 +159,266 @@
     animate();
 
     function init() {
-      /* Scene */
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf0f0f0);
+      /* Escena & cámara */
+      camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 1, 10000);
+      scene  = new THREE.Scene(); scene.background = new THREE.Color(0xf0f0f0);
       scene.add(new THREE.AmbientLight(0x606060));
-      const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-      dirLight.position.set(1, 0.75, 0.5).normalize();
-      scene.add(dirLight);
+      const dirLight = new THREE.DirectionalLight(0xffffff,1);
+      dirLight.position.set(1,0.75,0.5).normalize(); scene.add(dirLight);
 
-      /* Grid & ground */
-      cubeGeo = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
-      rollOverMesh = new THREE.Mesh(cubeGeo, new THREE.MeshBasicMaterial({ color: 0x44ff00, opacity: .5, transparent: true }));
+      /* Voxel helper */
+      cubeGeo = new THREE.BoxGeometry(voxelSize,voxelSize,voxelSize);
+      rollOverMesh = new THREE.Mesh(cubeGeo,new THREE.MeshBasicMaterial({color:0x44ff00,opacity:.5,transparent:true}));
       scene.add(rollOverMesh);
-      scene.add(new THREE.GridHelper(1000, 1000 / voxelSize));
-      const planeGeo = new THREE.PlaneGeometry(1000, 1000);
-      planeGeo.rotateX(-Math.PI / 2);
-      plane = new THREE.Mesh(planeGeo, new THREE.MeshBasicMaterial({ visible: false }));
-      plane.frustumCulled = false;
-      scene.add(plane);
-      objects.push(plane);
+
+      /* Suelo */
+      scene.add(new THREE.GridHelper(1000,1000/voxelSize));
+      const planeGeo = new THREE.PlaneGeometry(1000,1000); planeGeo.rotateX(-Math.PI/2);
+      plane = new THREE.Mesh(planeGeo,new THREE.MeshBasicMaterial({visible:false}));
+      plane.frustumCulled = false; scene.add(plane); objects.push(plane);
 
       pointer = new THREE.Vector2();
       raycaster = new THREE.Raycaster();
 
-      renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
+      renderer = new THREE.WebGLRenderer({antialias:true});
+      renderer.setSize(innerWidth,innerHeight); document.body.appendChild(renderer.domElement);
 
       controls = new PointerLockControls(camera, document.body);
       scene.add(controls.getObject());
-      controls.getObject().position.set(0, voxelSize * 2, 0);
+      controls.getObject().position.set(0, voxelSize*2, 0);
 
-      /* UI elements */
-      const btnAdd = document.getElementById('addCubeBtn');
-      const btnUp = document.getElementById('btnUp');
-      const btnDown = document.getElementById('btnDown');
-
+      /* Interfaz según dispositivo */
       if (!isMobile) {
         document.getElementById('blocker').addEventListener('click', () => controls.lock());
-        controls.addEventListener('lock', () => document.getElementById('blocker').classList.add('hidden'));
+        controls.addEventListener('lock',   () => document.getElementById('blocker').classList.add('hidden'));
         controls.addEventListener('unlock', () => document.getElementById('blocker').classList.remove('hidden'));
       } else {
         document.getElementById('blocker').classList.add('hidden');
         document.getElementById('joystick-container').classList.remove('hidden');
         document.getElementById('crosshair').classList.add('hidden');
-        btnAdd.classList.remove('hidden');
-        btnUp.classList.remove('hidden');
-        btnDown.classList.remove('hidden');
-        yaw = camera.rotation.y;
-        pitch = camera.rotation.x;
+        document.getElementById('addCubeBtn').classList.remove('hidden');
+        document.getElementById('upBtn').classList.remove('hidden');
+        document.getElementById('downBtn').classList.remove('hidden');
+        yaw = camera.rotation.y; pitch = camera.rotation.x;
         setupMobileJoysticks();
+        setupYButtons();                // ← nuevo
       }
 
-      /* Events */
+      /* Eventos comunes */
       document.addEventListener('keydown', onKeyDown);
-      document.addEventListener('keyup', onKeyUp);
+      document.addEventListener('keyup',   onKeyUp);
       document.addEventListener('pointermove', onPointerMove);
       document.addEventListener('pointerdown', onPointerDown);
       window.addEventListener('resize', onResize);
       document.getElementById('copyBtn').addEventListener('click', exportCubes);
-
-      // Mobile specific events
-      btnAdd.addEventListener('click', addCubeMobile);
-
-      // Y movement buttons (touch & mouse)
-      const startUp = () => mobileMoveY = 1;
-      const startDown = () => mobileMoveY = -1;
-      const stopY = () => mobileMoveY = 0;
-      ['touchstart', 'mousedown'].forEach(evt => {
-        btnUp.addEventListener(evt, startUp, { passive: true });
-        btnDown.addEventListener(evt, startDown, { passive: true });
-      });
-      ['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach(evt => {
-        btnUp.addEventListener(evt, stopY);
-        btnDown.addEventListener(evt, stopY);
+      document.getElementById('addCubeBtn').addEventListener('click', addCubeMobile);
+      renderer.domElement.addEventListener('touchend', e=>{
+        if (e.touches.length===0) onPointerDown(e.changedTouches[0]);
       });
 
-      // Optional: tap on scene to delete in mobile
-      renderer.domElement.addEventListener('touchend', e => {
-        if (e.touches.length === 0) onPointerDown(e.changedTouches[0]);
+      /* Agua & cielo */
+      const waterGeo = new THREE.PlaneGeometry(10000,10000);
+      water = new Water(waterGeo,{
+        textureWidth:512, textureHeight:512,
+        waterNormals: tl.load('textures/waternormals.jpg',t=>{t.wrapS=t.wrapT=THREE.RepeatWrapping;}),
+        sunDirection:new THREE.Vector3(), sunColor:0xffffff, waterColor:0x144fff,
+        distortionScale:3.7, fog:scene.fog!==undefined
       });
+      water.rotation.x = -Math.PI/2; water.position.y = 2; scene.add(water);
 
-      /* Water & sky */
-      const waterGeo = new THREE.PlaneGeometry(10000, 10000);
-      water = new Water(waterGeo, {
-        textureWidth: 512,
-        textureHeight: 512,
-        waterNormals: tl.load('textures/waternormals.jpg', t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; }),
-        sunDirection: new THREE.Vector3(),
-        sunColor: 0xffffff,
-        waterColor: 0x144fff,
-        distortionScale: 3.7,
-        fog: scene.fog !== undefined
-      });
-      water.rotation.x = -Math.PI / 2;
-      water.position.y = 2;
-      scene.add(water);
+      sky = new Sky(); sky.scale.setScalar(10000); scene.add(sky);
+      sun = new THREE.Vector3(); updateSun();
 
-      sky = new Sky();
-      sky.scale.setScalar(10000);
-      scene.add(sky);
-      sun = new THREE.Vector3();
-      updateSun();
-
-      /* GUI */
+      /* GUI rápida */
       const gui = new GUI();
-      gui.addColor({ water: '#144fff' }, 'water').name('Color del agua').onChange(v => water.material.uniforms.waterColor.value.set(v));
-      gui.add(cubeParams, 'textura', Object.keys(textures)).name('Textura cubo').onChange(v => cubeParams.textura = v);
-      gui.add({ exportarJSON: exportCubes }, 'exportarJSON').name('📋 Copiar JSON cubos');
+      gui.addColor({water:'#144fff'},'water').name('Color del agua')
+         .onChange(v=>water.material.uniforms.waterColor.value.set(v));
+      gui.add(cubeParams,'textura',Object.keys(textures)).name('Textura cubo');
+      gui.add({exportarJSON:exportCubes},'exportarJSON').name('📋 Copiar JSON cubos');
 
-      /* Demo */
+      /* Ejemplo inicial */
       cargarDesdeJSON([
-        { x: -210, y: 10, z: -310, textura: 'arena' },
-        { x: -170, y: 10, z: -370, textura: 'arena' }
+        {x:-210,y:10,z:-310,textura:'arena'},
+        {x:-170,y:10,z:-370,textura:'arena'}
       ]);
     }
 
-    /* ----- EVENTS ----- */
-    function onKeyDown(e) {
-      switch (e.code) {
-        case 'KeyW':
-          moveFlags.forward = true;
-          break;
-        case 'KeyS':
-          moveFlags.backward = true;
-          break;
-        case 'KeyA':
-          moveFlags.left = true;
-          break;
-        case 'KeyD':
-          moveFlags.right = true;
-          break;
-        case 'KeyQ':
-          moveFlags.up = true;
-          break;
-        case 'KeyE':
-          moveFlags.down = true;
-          break;
-        case 'ShiftLeft':
-          isShiftDown = true;
-          break;
+    /* ----- INPUT TECLADO ----- */
+    function onKeyDown(e){
+      switch(e.code){
+        case 'KeyW': moveFlags.forward = true; break;
+        case 'KeyS': moveFlags.backward = true; break;
+        case 'KeyA': moveFlags.left = true; break;
+        case 'KeyD': moveFlags.right = true; break;
+        case 'KeyQ': moveFlags.up = true; break;
+        case 'KeyE': moveFlags.down = true; break;
+        case 'ShiftLeft': isShiftDown=true; break;
+      }
+    }
+    function onKeyUp(e){
+      switch(e.code){
+        case 'KeyW': moveFlags.forward = false; break;
+        case 'KeyS': moveFlags.backward = false; break;
+        case 'KeyA': moveFlags.left = false; break;
+        case 'KeyD': moveFlags.right = false; break;
+        case 'KeyQ': moveFlags.up = false; break;
+        case 'KeyE': moveFlags.down = false; break;
+        case 'ShiftLeft': isShiftDown=false; break;
       }
     }
 
-    function onKeyUp(e) {
-      switch (e.code) {
-        case 'KeyW':
-          moveFlags.forward = false;
-          break;
-        case 'KeyS':
-          moveFlags.backward = false;
-          break;
-        case 'KeyA':
-          moveFlags.left = false;
-          break;
-        case 'KeyD':
-          moveFlags.right = false;
-          break;
-        case 'KeyQ':
-          moveFlags.up = false;
-          break;
-        case 'KeyE':
-          moveFlags.down = false;
-          break;
-        case 'ShiftLeft':
-          isShiftDown = false;
-          break;
+    /* ----- MOUSE / TOUCH PARA CUBOS ----- */
+    function onPointerMove(e){
+      pointer.set((e.clientX/innerWidth)*2-1, -(e.clientY/innerHeight)*2+1);
+      raycaster.setFromCamera(pointer,camera);
+      const hit = raycaster.intersectObjects(objects,false)[0];
+      if(hit){ rollOverMesh.position.copy(snap(hit.point.add(hit.face.normal))); }
+    }
+    function onPointerDown(e){
+      if(isMobile) return; // cubos en móvil via botón
+      pointer.set((e.clientX/innerWidth)*2-1, -(e.clientY/innerHeight)*2+1);
+      raycaster.setFromCamera(pointer,camera);
+      const hit = raycaster.intersectObjects(objects,false)[0];
+      if(!hit) return;
+      if(isShiftDown && hit.object!==plane){ // eliminar
+        scene.remove(hit.object); objects.splice(objects.indexOf(hit.object),1); return;
       }
+      createVoxelAt(rollOverMesh.position.clone());
     }
-
-    function onPointerMove(e) {
-      pointer.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
-      raycaster.setFromCamera(pointer, camera);
-      const hit = raycaster.intersectObjects(objects, false)[0];
-      if (hit) {
-        rollOverMesh.position.copy(snap(hit.point.add(hit.face.normal)));
-      }
+    function createVoxelAt(pos){
+      if(objects.some(o=>o!==plane && o.position.equals(pos))) return;
+      const voxel = new THREE.Mesh(cubeGeo,new THREE.MeshLambertMaterial({map:textures[cubeParams.textura]}));
+      voxel.position.copy(pos); scene.add(voxel); objects.push(voxel);
     }
-
-    function createVoxelAt(pos) {
-      if (objects.some(o => o !== plane && o.position.equals(pos))) return; // evita duplicados
-      const voxel = new THREE.Mesh(cubeGeo, new THREE.MeshLambertMaterial({ map: textures[cubeParams.textura], color: 0xffffff }));
-      voxel.position.copy(pos);
-      scene.add(voxel);
-      objects.push(voxel);
-    }
-
-    function onPointerDown(e) {
-      // En móviles la creación de cubos se controla con el botón dedicado
-      if (isMobile) return;
-
-      pointer.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
-      raycaster.setFromCamera(pointer, camera);
-      const hit = raycaster.intersectObjects(objects, false)[0];
-      if (!hit) return;
-
-      if (isShiftDown && hit.object !== plane) {
-        // eliminar
-        scene.remove(hit.object);
-        objects.splice(objects.indexOf(hit.object), 1);
-        return;
-      }
-
-      const pos = rollOverMesh.position.clone();
-      createVoxelAt(pos);
-    }
-
-    function addCubeMobile() {
-      // Lanza un rayo desde el centro de la pantalla para colocar el cubo delante del jugador
-      pointer.set(0, 0);
-      raycaster.setFromCamera(pointer, camera);
-      const hit = raycaster.intersectObjects(objects, false)[0];
+    function addCubeMobile(){
+      pointer.set(0,0); raycaster.setFromCamera(pointer,camera);
+      const hit = raycaster.intersectObjects(objects,false)[0];
       let pos;
-      if (hit) {
-        pos = snap(hit.point.add(hit.face.normal));
-      } else {
-        // si no hay colisión con nada, coloca a 2 voxels delante del jugador
-        const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-        pos = camera.position.clone().addScaledVector(dir, voxelSize * 2);
-        pos = snap(pos);
+      if(hit){ pos = snap(hit.point.add(hit.face.normal)); }
+      else{
+        const dir = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+        pos = snap(camera.position.clone().addScaledVector(dir, voxelSize*2));
       }
       createVoxelAt(pos);
-    }
-
-    function onResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
     /* ----- JOYSTICKS ----- */
-    function setupMobileJoysticks() {
-      const lBase = document.getElementById('left-joystick');
-      const lKnob = document.getElementById('left-knob');
-      const rBase = document.getElementById('right-joystick');
-      const rKnob = document.getElementById('right-knob');
-      const max = 50;
-      const clamp = (v) => Math.max(-max, Math.min(max, v));
-      const reset = k => k.style.transform = 'translate(-50%,-50%)';
+    function setupMobileJoysticks(){
+      const lBase = document.getElementById('left-joystick'),  lKnob = document.getElementById('left-knob');
+      const rBase = document.getElementById('right-joystick'), rKnob = document.getElementById('right-knob');
+      const max=50, clamp=v=>Math.max(-max,Math.min(max,v)), reset=k=>k.style.transform='translate(-50%,-50%)';
 
-      let lSX = 0, lSY = 0, lAct = false;
-      lBase.addEventListener('touchstart', e => {
-        const t = e.touches[0];
-        lAct = true;
-        lSX = t.clientX;
-        lSY = t.clientY;
-      }, { passive: true });
+      /* Joystick izquierda: mover X/Z */
+      let lSX=0,lSY=0,lAct=false;
+      lBase.addEventListener('touchstart',e=>{const t=e.touches[0];lAct=true;lSX=t.clientX;lSY=t.clientY;},{passive:true});
+      lBase.addEventListener('touchmove',e=>{
+        if(!lAct) return; e.preventDefault();
+        const t=e.touches[0], dx=clamp(t.clientX-lSX), dy=clamp(t.clientY-lSY);
+        lKnob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
+        mobileMoveX =  dx/max; mobileMoveZ = dy/max;
+      },{passive:false});
+      lBase.addEventListener('touchend',()=>{lAct=false;reset(lKnob);mobileMoveX=mobileMoveZ=0;});
 
-      lBase.addEventListener('touchmove', e => {
-        if (!lAct) return;
-        e.preventDefault();
-        const t = e.touches[0];
-        const dx = clamp(t.clientX - lSX);
-        const dy = clamp(t.clientY - lSY);
-        lKnob.style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
-        mobileMoveX = dx / max;
-        mobileMoveZ = dy / max;
-      }, { passive: false });
-
-      lBase.addEventListener('touchend', () => {
-        lAct = false;
-        reset(lKnob);
-        mobileMoveX = mobileMoveZ = 0;
-      });
-
-      let rSX = 0, rSY = 0, rAct = false;
-      rBase.addEventListener('touchstart', e => {
-        const t = e.touches[0];
-        rAct = true;
-        rSX = t.clientX;
-        rSY = t.clientY;
-      }, { passive: true });
-
-      rBase.addEventListener('touchmove', e => {
-        if (!rAct) return;
-        e.preventDefault();
-        const t = e.touches[0];
-        const dx = clamp(t.clientX - rSX);
-        const dy = clamp(t.clientY - rSY);
-        rKnob.style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
-        mobileYawDelta = dx / max;
-        mobilePitchDelta = dy / max;
-      }, { passive: false });
-
-      rBase.addEventListener('touchend', () => {
-        rAct = false;
-        reset(rKnob);
-        mobileYawDelta = mobilePitchDelta = 0;
-      });
+      /* Joystick derecha: mirar */
+      let rSX=0,rSY=0,rAct=false;
+      rBase.addEventListener('touchstart',e=>{const t=e.touches[0];rAct=true;rSX=t.clientX;rSY=t.clientY;},{passive:true});
+      rBase.addEventListener('touchmove',e=>{
+        if(!rAct) return; e.preventDefault();
+        const t=e.touches[0], dx=clamp(t.clientX-rSX), dy=clamp(t.clientY-rSY);
+        rKnob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
+        mobileYawDelta   =  dx/max;
+        mobilePitchDelta =  dy/max;
+      },{passive:false});
+      rBase.addEventListener('touchend',()=>{rAct=false;reset(rKnob);mobileYawDelta=mobilePitchDelta=0;});
     }
 
-    /* ----- HELPERS ----- */
-    function snap(v) {
-      return v.clone().divideScalar(voxelSize).floor().multiplyScalar(voxelSize).addScalar(voxelSize / 2);
+    /* ----- NUEVOS BOTONES ↑/↓ Y ----- */
+    function setupYButtons(){
+      const up   = document.getElementById('upBtn');
+      const down = document.getElementById('downBtn');
+
+      /* Helper ↓ asocia inicio/fin */
+      const bind = (el,dir)=>{
+        const start = ()=>mobileMoveY =  dir;
+        const stop  = ()=>{ if(mobileMoveY===dir) mobileMoveY = 0; };
+        el.addEventListener('touchstart',start,{passive:true});
+        el.addEventListener('touchend',stop);
+        el.addEventListener('mousedown',start);   // por si usa mouse en móvil
+        el.addEventListener('mouseup',stop);
+        el.addEventListener('mouseleave',stop);
+      };
+      bind(up,   +1);
+      bind(down, -1);
     }
 
-    function cargarDesdeJSON(arr) {
-      arr.forEach(({ x, y, z, textura }) => {
-        const voxel = new THREE.Mesh(cubeGeo, new THREE.MeshLambertMaterial({ map: textures[textura] || null, color: 0xffffff }));
-        voxel.position.set(x, y, z);
-        scene.add(voxel);
-        objects.push(voxel);
+    /* ----- VARIOS ----- */
+    function onResize(){ camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
+    function snap(v){ return v.clone().divideScalar(voxelSize).floor().multiplyScalar(voxelSize).addScalar(voxelSize/2); }
+
+    function cargarDesdeJSON(arr){
+      arr.forEach(({x,y,z,textura})=>{
+        const voxel = new THREE.Mesh(cubeGeo,new THREE.MeshLambertMaterial({map:textures[textura]||null}));
+        voxel.position.set(x,y,z); scene.add(voxel); objects.push(voxel);
       });
     }
-
-    function exportCubes() {
-      const data = objects
-        .filter(o => o !== plane)
-        .map(o => {
-          const key = Object.entries(textures).find(([k, v]) => v === o.material.map)?.[0] || 'desconocida';
-          return { x: o.position.x, y: o.position.y, z: o.position.z, textura: key };
-        });
-      navigator.clipboard.writeText(JSON.stringify(data, null, 2))
-        .then(() => alert('JSON copiado'))
-        .catch(console.error);
+    function exportCubes(){
+      const data = objects.filter(o=>o!==plane).map(o=>{
+        const key = Object.entries(textures).find(([k,v])=>v===o.material.map)?.[0]||'desconocida';
+        return {x:o.position.x,y:o.position.y,z:o.position.z,textura:key};
+      });
+      navigator.clipboard.writeText(JSON.stringify(data,null,2)).then(()=>alert('JSON copiado')).catch(console.error);
     }
-
-    function updateSun() {
-      const phi = THREE.MathUtils.degToRad(90 - sunParams.elevation);
-      const theta = THREE.MathUtils.degToRad(sunParams.azimuth);
-      sun.setFromSphericalCoords(1, phi, theta);
+    function updateSun(){
+      const phi=THREE.MathUtils.degToRad(90-sunParams.elevation);
+      const theta=THREE.MathUtils.degToRad(sunParams.azimuth);
+      sun.setFromSphericalCoords(1,phi,theta);
       sky.material.uniforms.sunPosition.value.copy(sun);
       water.material.uniforms.sunDirection.value.copy(sun).normalize();
     }
 
     /* ----- LOOP ----- */
-    function animate() {
+    function animate(){
       requestAnimationFrame(animate);
       const dt = clock.getDelta();
 
-      if (!isMobile && controls.isLocked) {
-        velocity.set(0, 0, 0);
-        if (moveFlags.forward) velocity.z -= DESKTOP_SPEED * dt;
-        if (moveFlags.backward) velocity.z += DESKTOP_SPEED * dt;
-        if (moveFlags.left) velocity.x -= DESKTOP_SPEED * dt;
-        if (moveFlags.right) velocity.x += DESKTOP_SPEED * dt;
-        if (moveFlags.up) velocity.y += DESKTOP_SPEED * dt;
-        if (moveFlags.down) velocity.y -= DESKTOP_SPEED * dt;
-        controls.moveRight(velocity.x * dt);
-        controls.moveForward(velocity.z * dt);
-        controls.getObject().position.y += velocity.y * dt;
+      /* Desktop ← PointerLock */
+      if(!isMobile && controls.isLocked){
+        velocity.set(0,0,0);
+        if(moveFlags.forward)  velocity.z -= DESKTOP_SPEED*dt;
+        if(moveFlags.backward) velocity.z += DESKTOP_SPEED*dt;
+        if(moveFlags.left)     velocity.x -= DESKTOP_SPEED*dt;
+        if(moveFlags.right)    velocity.x += DESKTOP_SPEED*dt;
+        if(moveFlags.up)       velocity.y += DESKTOP_SPEED*dt;
+        if(moveFlags.down)     velocity.y -= DESKTOP_SPEED*dt;
+        controls.moveRight( velocity.x*dt );
+        controls.moveForward( velocity.z*dt );
+        controls.getObject().position.y += velocity.y*dt;
       }
 
-      if (isMobile) {
+      /* Móvil */
+      if(isMobile){
         const lookSpeed = 2.5;
-        yaw -= mobileYawDelta * lookSpeed * dt;
-        pitch -= mobilePitchDelta * lookSpeed * dt;
-        pitch = THREE.MathUtils.clamp(pitch, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
-        camera.rotation.order = 'YXZ';
-        camera.rotation.y = yaw;
-        camera.rotation.x = pitch;
+        yaw   -= mobileYawDelta  * lookSpeed * dt;
+        pitch -= mobilePitchDelta* lookSpeed * dt;
+        pitch = THREE.MathUtils.clamp(pitch,-Math.PI/2+0.1,Math.PI/2-0.1);
+        camera.rotation.order='YXZ';
+        camera.rotation.y = yaw; camera.rotation.x = pitch;
 
-        const fwd = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-        const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-        camera.position.addScaledVector(fwd, mobileMoveZ * MOBILE_SPEED * dt);
+        const fwd   = new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
+        const right = new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
+        camera.position.addScaledVector(fwd,   mobileMoveZ * MOBILE_SPEED * dt);
         camera.position.addScaledVector(right, mobileMoveX * MOBILE_SPEED * dt);
-        camera.position.y = 5;
-        camera.position.x = THREE.MathUtils.clamp(camera.position.x, -500, 500);
-        camera.position.z = THREE.MathUtils.clamp(camera.position.z, -500, 500);
+        camera.position.y += mobileMoveY * MOBILE_SPEED * dt;
+
+        /* Límites opcionales */
+        camera.position.x = THREE.MathUtils.clamp(camera.position.x,-500,500);
+        camera.position.z = THREE.MathUtils.clamp(camera.position.z,-500,500);
+        camera.position.y = THREE.MathUtils.clamp(camera.position.y, 2, 150);
       }
 
-      if (water) water.material.uniforms.time.value += dt;
-      renderer.render(scene, camera);
+      if(water) water.material.uniforms.time.value += dt;
+      renderer.render(scene,camera);
     }
   </script>
 </body>
-
 </html>
