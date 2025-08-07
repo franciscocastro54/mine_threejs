@@ -176,6 +176,9 @@
   <button id="upBtn" class="yBtn hidden">↑ Y</button>
   <button id="downBtn" class="yBtn hidden">↓ Y</button>
 
+  <input id="jsonInput" type="file" accept=".json,application/json" hidden>
+
+
   <script type="importmap">
     {
       "imports": {
@@ -224,7 +227,20 @@
       hojas: tl.load('textures/textura_hojas.png'),
       blanco: tl.load('textures/textura_piso.jpg'),
       negro: tl.load('textures/textura_tec_negra.png'),
-      ladrillo: tl.load('textures/textura_brick_2.jpg')
+      ladrillo: tl.load('textures/textura_brick_2.jpg'),
+      baldosaGris: tl.load('textures/textura_baldosaGris.jpg'),
+      pisoVerde: tl.load('textures/textura_pisoVerde.jpg'),
+      tejasAzules: tl.load('textures/textura_tejasAzules.jpg'),
+      metal1: tl.load('textures/textura_metal1.jpg'),
+      ladrillo2: tl.load('textures/textura_ladrillo2.jpg'),
+      ladrillo3: tl.load('textures/textura_ladrillo3.jpg'),
+      ladrillo4: tl.load('textures/textura_ladrillo4.jpg'),
+      baldosaCafe: tl.load('textures/textura_baldosaCafe.jpg'),
+      corteza: tl.load('textures/textura_corteza2.jpg'),
+      madera2: tl.load('textures/textura_madera2.jpg'),
+      madera3: tl.load('textures/textura_madera3.jpg'),
+      gafas: tl.load('textures/textura_gafas.png')
+
     };
     Object.values(textures).forEach(t => t.colorSpace = THREE.SRGBColorSpace);
 
@@ -292,6 +308,32 @@
         if (e.touches.length === 0) onPointerDown(e.changedTouches[0]);
       });
 
+      /* --------- Cargar JSON desde archivo --------- */
+      document.getElementById('jsonInput').addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = evt => {
+          try {
+            const data = JSON.parse(evt.target.result);
+
+            if (!Array.isArray(data)) {
+              alert('El JSON debe ser un array de objetos con {x,y,z,textura}');
+              return;
+            }
+
+            cargarDesdeJSON(data);          // ← tu función ya existente
+            alert('Voxeles cargados correctamente');
+          } catch (err) {
+            console.error(err);
+            alert('JSON no válido');
+          }
+        };
+        reader.readAsText(file);
+      });
+
+
       /* Agua & cielo */
       const waterGeo = new THREE.PlaneGeometry(10000, 10000);
       water = new Water(waterGeo, {
@@ -310,13 +352,43 @@
       gui.addColor({ water: '#144fff' }, 'water').name('Color del agua')
         .onChange(v => water.material.uniforms.waterColor.value.set(v));
       gui.add(cubeParams, 'textura', Object.keys(textures)).name('Textura cubo');
-      gui.add({ exportarJSON: exportCubes }, 'exportarJSON').name('📋 Copiar JSON cubos');
+      gui.add({ exportarJSON: exportCubes }, 'exportarJSON').name('💾 Descargar escena en .json');
+      /* --- GUI (añádelo junto a tus otros gui.add) --- */
+      const fileChooser = document.getElementById('jsonInput');
 
-      /* Ejemplo inicial */
-      cargarDesdeJSON([
-        { x: -210, y: 10, z: -310, textura: 'arena' },
-        { x: -170, y: 10, z: -370, textura: 'arena' }
-      ]);
+      /* 1. Botón en el panel */
+      gui.add({ importarJSON() { fileChooser.click(); } }, 'importarJSON')
+        .name('📂 cargar escena en .json');
+
+      /* 2. Lector del archivo seleccionado */
+      fileChooser.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = evt => {
+          try {
+            const data = JSON.parse(evt.target.result);
+            if (!Array.isArray(data)) {
+              alert('El JSON debe ser un array de objetos con {x,y,z,textura}');
+              return;
+            }
+            cargarDesdeJSON(data);
+            alert('Voxeles importados');
+          } catch (err) {
+            console.error(err);
+            alert('JSON no válido');
+          }
+        };
+        reader.readAsText(file);
+      });
+
+
+
+      fetch('./cubes.json')
+        .then(r => r.json())            // Convierte la respuesta a objeto JS
+        .then(cargarDesdeJSON)          // Reconstruye la escena
+        .catch(err => console.error('No se pudo cargar cubes.json', err));
     }
 
     /* ----- INPUT TECLADO ----- */
@@ -501,18 +573,56 @@
     function snap(v) { return v.clone().divideScalar(voxelSize).floor().multiplyScalar(voxelSize).addScalar(voxelSize / 2); }
 
     function cargarDesdeJSON(arr) {
+      /* 1️⃣ Eliminar todos los voxeles existentes (mantener el plano) */
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const obj = objects[i];
+        if (obj !== plane) {           // el plano base se conserva
+          scene.remove(obj);           // lo quitamos de la escena
+          objects.splice(i, 1);        // y del array de colisiones
+        }
+      }
+
+      /* 2️⃣ Crear los nuevos voxeles desde el JSON */
       arr.forEach(({ x, y, z, textura }) => {
-        const voxel = new THREE.Mesh(cubeGeo, new THREE.MeshLambertMaterial({ map: textures[textura] || null }));
-        voxel.position.set(x, y, z); scene.add(voxel); objects.push(voxel);
+        const mat = new THREE.MeshLambertMaterial({ map: textures[textura] || null });
+        const voxel = new THREE.Mesh(cubeGeo, mat);
+        voxel.position.set(x, y, z);
+        scene.add(voxel);
+        objects.push(voxel);
       });
     }
+
     function exportCubes() {
-      const data = objects.filter(o => o !== plane).map(o => {
-        const key = Object.entries(textures).find(([k, v]) => v === o.material.map)?.[0] || 'desconocida';
-        return { x: o.position.x, y: o.position.y, z: o.position.z, textura: key };
-      });
-      navigator.clipboard.writeText(JSON.stringify(data, null, 2)).then(() => alert('JSON copiado')).catch(console.error);
+      // 1. Recopilar datos de los voxeles (igual que antes)
+      const data = objects
+        .filter(o => o !== plane)
+        .map(o => {
+          const key =
+            Object.entries(textures).find(([k, v]) => v === o.material.map)?.[0] ??
+            'desconocida';
+          return { x: o.position.x, y: o.position.y, z: o.position.z, textura: key };
+        });
+
+      // 2. Convertir a texto JSON con sangría de 2 espacios
+      const json = JSON.stringify(data, null, 2);
+
+      // 3. Crear un Blob y generar una URL temporal
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+
+      // 4. Crear un enlace invisible y “clickearlo” para iniciar la descarga
+      const a = document.createElement('a');
+      a.href = url;
+      // Nombre de archivo con marca de tiempo ISO (sin caracteres inválidos)
+      a.download = `voxeles_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      // 5. Liberar la URL temporal
+      URL.revokeObjectURL(url);
     }
+
     function updateSun() {
       const phi = THREE.MathUtils.degToRad(90 - sunParams.elevation);
       const theta = THREE.MathUtils.degToRad(sunParams.azimuth);
