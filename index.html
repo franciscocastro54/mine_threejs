@@ -473,11 +473,6 @@
         water.material.uniforms['sunDirection'].value.copy(sun).normalize();
       }
       updateSun();
-
-
-
-
-
     }
 
     function getSnappedPosition(position, size) {
@@ -551,9 +546,11 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
+
     function animate() {
       requestAnimationFrame(animate);
-
+      const minX = -500, maxX = 500;
+      const minZ = -500, maxZ = 500;
       const delta = 0.05;
 
       if (controls.isLocked) {
@@ -598,15 +595,6 @@
       renderer.render(scene, camera);
     }
   </script>
-
-
-
-
-
-
-
-
-
 </body>
 
 </html>
