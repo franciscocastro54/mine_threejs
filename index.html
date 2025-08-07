@@ -213,7 +213,7 @@
     /* Movimiento móvil */
     let mobileMoveX = 0, mobileMoveZ = 0;
     let mobileYawDelta = 0, mobilePitchDelta = 0;
-    let mobileMoveY = 0;                // ← nuevo
+    let mobileMoveY = 0;
     let yaw = 0, pitch = 0;
 
     /* Texturas */
@@ -436,14 +436,33 @@
 
       /* Joystick izquierda: mover X/Z */
       let lSX = 0, lSY = 0, lAct = false;
-      lBase.addEventListener('touchstart', e => { const t = e.touches[0]; lAct = true; lSX = t.clientX; lSY = t.clientY; }, { passive: true });
+      lBase.addEventListener('touchstart', e => {
+        const t = e.touches[0];
+        lAct = true;
+        lSX = t.clientX;
+        lSY = t.clientY;
+      }, { passive: true });
+
       lBase.addEventListener('touchmove', e => {
-        if (!lAct) return; e.preventDefault();
-        const t = e.touches[0], dx = clamp(t.clientX - lSX), dy = clamp(t.clientY - lSY);
-        lKnob.style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
-        mobileMoveX = dx / max; mobileMoveZ = dy / max;
+        if (!lAct) return;
+        e.preventDefault();
+
+        const t = e.touches[0];
+        const dx = clamp(t.clientX - lSX);
+        const dy = clamp(t.clientY - lSY);
+
+        lKnob.style.transform =
+          `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+
+        mobileMoveX = dx / max;  // izquierda / derecha sin cambios
+        mobileMoveZ = -dy / max;  // ← inversión: arriba → positivo (avanzar)
       }, { passive: false });
-      lBase.addEventListener('touchend', () => { lAct = false; reset(lKnob); mobileMoveX = mobileMoveZ = 0; });
+
+      lBase.addEventListener('touchend', () => {
+        lAct = false;
+        reset(lKnob);
+        mobileMoveX = mobileMoveZ = 0;
+      });
 
       /* Joystick derecha: mirar */
       let rSX = 0, rSY = 0, rAct = false;
@@ -510,8 +529,8 @@
       /* Desktop ← PointerLock */
       if (!isMobile && controls.isLocked) {
         velocity.set(0, 0, 0);
-        if (moveFlags.forward) velocity.z -= DESKTOP_SPEED * dt;
-        if (moveFlags.backward) velocity.z += DESKTOP_SPEED * dt;
+        if (moveFlags.forward) velocity.z += DESKTOP_SPEED * dt;
+        if (moveFlags.backward) velocity.z -= DESKTOP_SPEED * dt;
         if (moveFlags.left) velocity.x -= DESKTOP_SPEED * dt;
         if (moveFlags.right) velocity.x += DESKTOP_SPEED * dt;
         if (moveFlags.up) velocity.y += DESKTOP_SPEED * dt;
