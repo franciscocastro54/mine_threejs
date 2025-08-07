@@ -96,7 +96,7 @@
       cursor: pointer;
     }
 
-    /* Mobile‑only cube button */
+    /* Mobile-only cube button */
     #addCubeBtn {
       position: fixed;
       bottom: 140px;
@@ -114,40 +114,48 @@
       user-select: none;
       touch-action: manipulation;
     }
+
+    /* Mobile Y‑axis buttons */
+    #btnUp,
+    #btnDown {
+      position: fixed;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #08f;
+      color: #fff;
+      font-size: 28px;
+      border: none;
+      z-index: 300;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    #btnUp {
+      bottom: 200px;
+    }
+
+    #btnDown {
+      bottom: 130px;
+    }
   </style>
 </head>
 
 <body>
   <div id="crosshair"></div>
   <div id="joystick-container" class="hidden">
-    <div id="left-joystick" class="joystick">
-      <div id="left-knob" class="knob"></div>
-    </div>
-    <div id="right-joystick" class="joystick">
-      <div id="right-knob" class="knob"></div>
-    </div>
+    <div id="left-joystick" class="joystick"><div id="left-knob" class="knob"></div></div>
+    <div id="right-joystick" class="joystick"><div id="right-knob" class="knob"></div></div>
   </div>
-  <div id="blocker">
-    <div id="instructions">
-      <p><b>Haz clic para comenzar</b></p>
-      <p>W A S D para moverse, mouse para mirar</p>
-      <p>Click: añadir cubo, Shift+Click: eliminar cubo</p>
-      <p>Q / E para subir/bajar</p>
-      <p>ESC pausa/configuración</p>
-    </div>
-  </div>
+  <div id="blocker"><div id="instructions"><p><b>Haz clic para comenzar</b></p><p>W A S D para moverse, mouse para mirar</p><p>Click: añadir cubo, Shift+Click: eliminar cubo</p><p>Q / E para subir/bajar</p><p>ESC pausa/configuración</p></div></div>
   <button id="copyBtn">Copiar coordenadas</button>
-  <!-- 🙂 Este botón solo se mostrará en dispositivos móviles -->
+  <!-- Botones visibles sólo en móvil -->
   <button id="addCubeBtn" class="hidden">Añadir&nbsp;Cubo</button>
+  <button id="btnUp" class="hidden">↑</button>
+  <button id="btnDown" class="hidden">↓</button>
 
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "./build/three.module.js",
-        "three/addons/": "./jsm/"
-      }
-    }
-  </script>
+  <script type="importmap">{"imports":{"three":"./build/three.module.js","three/addons/":"./jsm/"}}</script>
 
   <script type="module">
     import * as THREE from 'three';
@@ -160,11 +168,11 @@
     const voxelSize = 20;
     const moveFlags = { forward: false, backward: false, left: false, right: false, up: false, down: false };
     const velocity = new THREE.Vector3();
-    const DESKTOP_SPEED = 10000;
-    const MOBILE_SPEED = 9000;
+    const DESKTOP_SPEED = 6000;
+    const MOBILE_SPEED = 6000;
 
     const isMobile = window.matchMedia('(pointer: coarse)').matches;
-    const clock = new THREE.Clock(); //  🌟  creado ANTES de animate()
+    const clock = new THREE.Clock();
 
     let camera, scene, renderer, controls;
     let plane, pointer, raycaster, isShiftDown = false;
@@ -174,7 +182,8 @@
     let water, sky, sun;
     const sunParams = { elevation: 2, azimuth: 180 };
 
-    let mobileMoveX = 0, mobileMoveZ = 0, mobileYawDelta = 0, mobilePitchDelta = 0;
+    let mobileMoveX = 0, mobileMoveZ = 0, mobileMoveY = 0;
+    let mobileYawDelta = 0, mobilePitchDelta = 0;
     let yaw = 0, pitch = 0;
 
     /* Textures */
@@ -229,6 +238,11 @@
       scene.add(controls.getObject());
       controls.getObject().position.set(0, voxelSize * 2, 0);
 
+      /* UI elements */
+      const btnAdd = document.getElementById('addCubeBtn');
+      const btnUp = document.getElementById('btnUp');
+      const btnDown = document.getElementById('btnDown');
+
       if (!isMobile) {
         document.getElementById('blocker').addEventListener('click', () => controls.lock());
         controls.addEventListener('lock', () => document.getElementById('blocker').classList.add('hidden'));
@@ -237,7 +251,9 @@
         document.getElementById('blocker').classList.add('hidden');
         document.getElementById('joystick-container').classList.remove('hidden');
         document.getElementById('crosshair').classList.add('hidden');
-        document.getElementById('addCubeBtn').classList.remove('hidden');
+        btnAdd.classList.remove('hidden');
+        btnUp.classList.remove('hidden');
+        btnDown.classList.remove('hidden');
         yaw = camera.rotation.y;
         pitch = camera.rotation.x;
         setupMobileJoysticks();
@@ -250,8 +266,24 @@
       document.addEventListener('pointerdown', onPointerDown);
       window.addEventListener('resize', onResize);
       document.getElementById('copyBtn').addEventListener('click', exportCubes);
-      document.getElementById('addCubeBtn').addEventListener('click', addCubeMobile);
-      // For mobile deletion via tap (optional)
+
+      // Mobile specific events
+      btnAdd.addEventListener('click', addCubeMobile);
+
+      // Y movement buttons (touch & mouse)
+      const startUp = () => mobileMoveY = 1;
+      const startDown = () => mobileMoveY = -1;
+      const stopY = () => mobileMoveY = 0;
+      ['touchstart', 'mousedown'].forEach(evt => {
+        btnUp.addEventListener(evt, startUp, { passive: true });
+        btnDown.addEventListener(evt, startDown, { passive: true });
+      });
+      ['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach(evt => {
+        btnUp.addEventListener(evt, stopY);
+        btnDown.addEventListener(evt, stopY);
+      });
+
+      // Optional: tap on scene to delete in mobile
       renderer.domElement.addEventListener('touchend', e => {
         if (e.touches.length === 0) onPointerDown(e.changedTouches[0]);
       });
