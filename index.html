@@ -12,7 +12,7 @@
       background: #f0f0f0;
     }
 
-    /* Simple crosshair at the center of the screen */
+    /* Simple crosshair */
     #crosshair {
       position: absolute;
       top: 50%;
@@ -26,116 +26,43 @@
       z-index: 5;
     }
 
-    #mobile-keyboard {
+    .hidden { display: none !important; }
+
+    /* Joysticks */
+    .joystick {
       position: fixed;
-      bottom: 20px;
-      left: 20px;
-      z-index: 300;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      width: 120px;
+      height: 120px;
+      background: rgba(0,0,0,.35);
+      border: 2px solid rgba(255,255,255,.5);
+      border-radius: 50%;
+      touch-action: none;
       user-select: none;
     }
-
-    #mobile-keyboard button {
-      width: 60px;
-      height: 60px;
-      font-size: 20px;
-      background-color: rgba(0, 0, 0, 0.6);
-      color: white;
-      border: none;
-      border-radius: 10px;
+    #left-joystick { left:20px; bottom:20px; }
+    #right-joystick{ right:20px; bottom:20px; }
+    .knob{
+      position:absolute;width:60px;height:60px;background:rgba(255,255,255,.7);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;
     }
 
-    #blocker {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 20px;
-      z-index: 100;
+    #blocker{
+      position:absolute;width:100%;height:100%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;z-index:100;
     }
-
-    #instructions {
-      text-align: center;
-      max-width: 600px;
-    }
-
-    #copyBtn {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      z-index: 200;
-      padding: 10px 15px;
-      font-size: 14px;
-      background: #08f;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    #mobile-controls {
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      z-index: 300;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      user-select: none;
-    }
-
-    #mobile-controls button {
-      width: 60px;
-      height: 60px;
-      font-size: 20px;
-      background-color: rgba(0, 0, 0, 0.6);
-      color: white;
-      border: none;
-      border-radius: 10px;
-    }
+    #instructions{ text-align:center;max-width:600px; }
+    #copyBtn{ position:fixed;top:10px;right:10px;z-index:200;padding:10px 15px;font-size:14px;background:#08f;color:#fff;border:none;border-radius:5px;cursor:pointer; }
   </style>
 </head>
 
 <body>
   <div id="crosshair"></div>
-
-  <!-- On‑screen joysticks for mobile devices -->
   <div id="joystick-container" class="hidden">
-    <div id="left-joystick" class="joystick">
-      <div id="left-knob" class="knob"></div>
-    </div>
-    <div id="right-joystick" class="joystick">
-      <div id="right-knob" class="knob"></div>
-    </div>
+    <div id="left-joystick" class="joystick"><div id="left-knob" class="knob"></div></div>
+    <div id="right-joystick" class="joystick"><div id="right-knob" class="knob"></div></div>
   </div>
-
-  <div id="blocker">
-    <div id="instructions">
-      <p><b>Haz click para comenzar</b></p>
-      <p>W A S D para moverse, mouse para mirar</p>
-      <p>Click: añadir cubo, Shift + click: eliminar cubo</p>
-      <p>Q E para subir/bajar</p>
-      <p>ESC pausa/configuración</p>
-
-
-    </div>
-  </div>
+  <div id="blocker"><div id="instructions"><p><b>Haz clic para comenzar</b></p><p>W A S D para moverse, mouse para mirar</p><p>Click: añadir cubo, Shift+Click: eliminar cubo</p><p>Q / E para subir/bajar</p><p>ESC pausa/configuración</p></div></div>
   <button id="copyBtn">Copiar coordenadas</button>
 
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "./build/three.module.js",
-        "three/addons/": "./jsm/"
-      }
-    }
-  </script>
+  <script type="importmap">{"imports":{"three":"./build/three.module.js","three/addons/":"./jsm/"}}</script>
 
   <script type="module">
     import * as THREE from 'three';
@@ -144,456 +71,123 @@
     import { Sky } from 'three/addons/objects/Sky.js';
     import GUI from 'https://cdn.jsdelivr.net/npm/lil-gui@0.19/+esm';
 
-
+    /* ----- CONSTANTS & GLOBALS ----- */
     const voxelSize = 20;
+    const moveFlags = { forward:false, backward:false, left:false, right:false, up:false, down:false };
+    const velocity   = new THREE.Vector3();
+    const DESKTOP_SPEED = 400;
+    const MOBILE_SPEED  = 100;
+
+    const isMobile = window.matchMedia('(pointer: coarse)').matches;
+    const clock = new THREE.Clock();       //  🌟  creado ANTES de animate()
+
     let camera, scene, renderer, controls;
-    let plane, pointer, raycaster, isShiftDown = false;
-    let rollOverMesh, cubeGeo, cubeMaterial;
-    const objects = [];
-    const move = { forward: false, backward: false, left: false, right: false, up: false, down: false };
-    const velocity = new THREE.Vector3();
-    const speed = 400;
+    let plane, pointer, raycaster, isShiftDown=false;
+    let rollOverMesh, cubeGeo;
+    const objects=[];
 
     let water, sky, sun;
-    const parameters = { elevation: 2, azimuth: 180 };
+    const sunParams = { elevation:2, azimuth:180 };
 
-    // Mobile control variables
-    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    let mobileMoveX = 0, mobileMoveZ = 0;
-    let mobileYawDelta = 0, mobilePitchDelta = 0;
-    let yaw = 0, pitch = 0;
+    let mobileMoveX=0, mobileMoveZ=0, mobileYawDelta=0, mobilePitchDelta=0;
+    let yaw=0, pitch=0;
 
-
-    // Texturas
-    const textureLoader = new THREE.TextureLoader();
+    /* Textures */
+    const tl = new THREE.TextureLoader();
     const textures = {
-      arena: textureLoader.load('textures/textura_arena.png'),
-      madera: textureLoader.load('textures/textura_wood.jpg'),
-      hojas: textureLoader.load('textures/textura_hojas.png'),
-      blanco: textureLoader.load('textures/textura_piso.jpg'),
-      negro: textureLoader.load('textures/textura_tec_negra.png'),
-      ladrillo: textureLoader.load('textures/textura_brick_2.jpg')
-
+      arena  : tl.load('textures/textura_arena.png'),
+      madera : tl.load('textures/textura_wood.jpg'),
+      hojas  : tl.load('textures/textura_hojas.png'),
+      blanco : tl.load('textures/textura_piso.jpg'),
+      negro  : tl.load('textures/textura_tec_negra.png'),
+      ladrillo: tl.load('textures/textura_brick_2.jpg')
     };
-    for (const key in textures) {
-      textures[key].colorSpace = THREE.SRGBColorSpace;
-    }
-    function cargarDesdeJSON(data) {
-      data.forEach(item => {
-        const { x, y, z, textura } = item;
-        const material = new THREE.MeshLambertMaterial({
-          map: textures[textura] || null,
-          color: 0xffffff
-        });
-        const voxel = new THREE.Mesh(cubeGeo, material);
-        voxel.position.set(x, y, z);
-        scene.add(voxel);
-        objects.push(voxel);
-      });
-    }
+    Object.values(textures).forEach(t=>t.colorSpace=THREE.SRGBColorSpace);
 
-    const gui = new GUI();
-    const waterParams = { color: '#F54927' };
-    const cubeParams = { textura: 'madera' };
+    /* Params for GUI */
+    const cubeParams = { textura:'madera' };
 
+    /* ----- INIT & MAIN ----- */
     init();
     animate();
 
-    function init() {
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf0f0f0);
-      const ambientLight = new THREE.AmbientLight(0x606060);
-      scene.add(ambientLight);
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-      directionalLight.position.set(1, 0.75, 0.5).normalize();
-      scene.add(directionalLight);
+    function init(){
+      /* Scene */
+      camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,1,10000);
+      scene  = new THREE.Scene(); scene.background=new THREE.Color(0xf0f0f0);
+      scene.add(new THREE.AmbientLight(0x606060));
+      const dirLight=new THREE.DirectionalLight(0xffffff,1);dirLight.position.set(1,0.75,0.5).normalize();scene.add(dirLight);
 
-
-      const ambientLight2 = new THREE.AmbientLight(0x606060);
-      scene.add(ambientLight);
-      const directionalLight2 = new THREE.DirectionalLight(0xffffff, 1);
-      directionalLight2.position.set(100, 130, -50).normalize();
-      scene.add(directionalLight2);
-
-      const map = new THREE.TextureLoader().load('textures/textura_arena.png');
-      map.colorSpace = THREE.SRGBColorSpace;
-      cubeGeo = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
-      cubeMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff, map: map });
-
-      const rollOverGeo = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
-      const rollOverMaterial = new THREE.MeshBasicMaterial({ color: 0x44FF00, opacity: 0.5, transparent: true });
-      rollOverMesh = new THREE.Mesh(rollOverGeo, rollOverMaterial);
+      /* Grid & ground */
+      cubeGeo=new THREE.BoxGeometry(voxelSize,voxelSize,voxelSize);
+      rollOverMesh=new THREE.Mesh(cubeGeo,new THREE.MeshBasicMaterial({color:0x44ff00,opacity:.5,transparent:true}));
       scene.add(rollOverMesh);
+      scene.add(new THREE.GridHelper(1000,1000/voxelSize));
+      const planeGeo=new THREE.PlaneGeometry(1000,1000);planeGeo.rotateX(-Math.PI/2);
+      plane=new THREE.Mesh(planeGeo,new THREE.MeshBasicMaterial({visible:false}));plane.frustumCulled=false;scene.add(plane);objects.push(plane);
 
-      const grid = new THREE.GridHelper(1000, 1000 / voxelSize);
-      scene.add(grid);
+      pointer=new THREE.Vector2();raycaster=new THREE.Raycaster();
 
-      const geometry = new THREE.PlaneGeometry(1000, 1000);
-      geometry.rotateX(-Math.PI / 2);
-      plane = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ visible: false }));
-      plane.frustumCulled = false;
-      scene.add(plane);
-      objects.push(plane);
+      renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(window.innerWidth,window.innerHeight);document.body.appendChild(renderer.domElement);
 
-      pointer = new THREE.Vector2();
-      raycaster = new THREE.Raycaster();
+      controls=new PointerLockControls(camera,document.body);scene.add(controls.getObject());controls.getObject().position.set(0,voxelSize*2,0);
 
-      renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
-
-      controls = new PointerLockControls(camera, document.body);
-      scene.add(controls.getObject());
-      controls.getObject().position.set(0, voxelSize * 2, 0);
-
-      document.getElementById('blocker').addEventListener('click', () => controls.lock());
-      controls.addEventListener('lock', () => document.getElementById('blocker').style.display = 'none');
-      controls.addEventListener('unlock', () => document.getElementById('blocker').style.display = 'flex');
-
-      document.addEventListener('keydown', onKeyDown);
-      document.addEventListener('keyup', onKeyUp);
-      document.addEventListener('pointermove', onPointerMove);
-      document.addEventListener('pointerdown', onPointerDown);
-      window.addEventListener('resize', onWindowResize);
-
-      document.getElementById('copyBtn').addEventListener('click', () => {
-        const positions = objects.filter(obj => obj !== plane).map(obj => ({ x: obj.position.x, y: obj.position.y, z: obj.position.z }));
-        navigator.clipboard.writeText(JSON.stringify(positions, null, 2)).then(() => alert('Coordenadas copiadas')).catch(err => console.error(err));
-      });
-
-      renderer.domElement.addEventListener('touchend', (e) => {
-        if (e.touches.length === 0) {
-          onPointerDown(e);
-        }
-      });
-
-
-      let lastTouch = null;
-      renderer.domElement.addEventListener('touchstart', e => {
-        if (e.touches.length === 1) {
-          lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        }
-      });
-
-      renderer.domElement.addEventListener('touchmove', e => {
-        if (!lastTouch || e.touches.length !== 1) return;
-        const dx = e.touches[0].clientX - lastTouch.x;
-        const dy = e.touches[0].clientY - lastTouch.y;
-        controls.getObject().rotation.y -= dx * 0.002;
-        controls.pitchObject.rotation.x -= dy * 0.002;
-        lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      });
-
-      if (!isMobile) {
-        // Desktop: usar controles existentes
-        document.getElementById('instructions').addEventListener('click', () => {
-          controls.lock();
-        });
-        controls.addEventListener('lock', () => {
-          document.getElementById('blocker').classList.add('hidden');
-        });
-        controls.addEventListener('unlock', () => {
-          document.getElementById('blocker').classList.remove('hidden');
-        });
-      } else {
-        // Mobile: ocultar bloqueo y mostrar joysticks
+      if(!isMobile){
+        document.getElementById('blocker').addEventListener('click',()=>controls.lock());
+        controls.addEventListener('lock',()=>document.getElementById('blocker').classList.add('hidden'));
+        controls.addEventListener('unlock',()=>document.getElementById('blocker').classList.remove('hidden'));
+      }else{
         document.getElementById('blocker').classList.add('hidden');
-        const joystickContainer = document.getElementById('joystick-container');
-        joystickContainer.classList.remove('hidden');
+        document.getElementById('joystick-container').classList.remove('hidden');
         document.getElementById('crosshair').classList.add('hidden');
-        yaw = camera.rotation.y;
-        pitch = camera.rotation.x;
-        setupMobileJoysticks();
+        yaw=camera.rotation.y; pitch=camera.rotation.x; setupMobileJoysticks();
       }
 
-      // Agua y cielo
-      // Agua y cielo
-      const waterGeometry = new THREE.PlaneGeometry(10000, 10000);
-      water = new Water(waterGeometry, {
-        textureWidth: 512,
-        textureHeight: 512,
-        waterNormals: new THREE.TextureLoader().load('textures/waternormals.jpg', texture => {
-          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        }),
-        sunDirection: new THREE.Vector3(),
-        sunColor: 0xffffff,
-        waterColor: 0x144fff,
-        distortionScale: 3.7,
-        fog: scene.fog !== undefined
-      });
-      water.rotation.x = -Math.PI / 2;
-      water.position.y = 2;
-      scene.add(water);
+      /* Events */
+      document.addEventListener('keydown',onKeyDown);
+      document.addEventListener('keyup',onKeyUp);
+      document.addEventListener('pointermove',onPointerMove);
+      document.addEventListener('pointerdown',onPointerDown);
+      window.addEventListener('resize',onResize);
+      document.getElementById('copyBtn').addEventListener('click',exportCubes);
+      renderer.domElement.addEventListener('touchend',e=>{if(e.touches.length===0)onPointerDown(e.changedTouches[0]);});
 
-      const jsonInicial = [{
-        "x": -210,
-        "y": 10,
-        "z": -310,
-        "textura": "arena"
-      },
-      {
-        "x": -170,
-        "y": 10,
-        "z": -370,
-        "textura": "arena"
-      }];
-      cargarDesdeJSON(jsonInicial);
+      /* Water & sky */
+      const waterGeo=new THREE.PlaneGeometry(10000,10000);
+      water=new Water(waterGeo,{textureWidth:512,textureHeight:512,waterNormals:tl.load('textures/waternormals.jpg',t=>{t.wrapS=t.wrapT=THREE.RepeatWrapping;}),sunDirection:new THREE.Vector3(),sunColor:0xffffff,waterColor:0x144fff,distortionScale:3.7,fog:scene.fog!==undefined});
+      water.rotation.x=-Math.PI/2;water.position.y=2;scene.add(water);
+      sky=new Sky();sky.scale.setScalar(10000);scene.add(sky);sun=new THREE.Vector3();updateSun();
 
+      /* GUI */
+      const gui=new GUI();gui.addColor({water:'#144fff'},'water').name('Color del agua').onChange(v=>water.material.uniforms.waterColor.value.set(v));
+      gui.add(cubeParams,'textura',Object.keys(textures)).name('Textura cubo').onChange(v=>cubeParams.textura=v);
+      gui.add({exportarJSON:exportCubes},'exportarJSON').name('📋 Copiar JSON cubos');
 
-      // GUI para cambiar color del agua
-      const gui = new GUI();
-      const waterParams = {
-        color: '#144fff'
-      };
-
-
-      const exportParams = {
-        exportarJSON: () => {
-          const data = objects
-            .filter(obj => obj !== plane)
-            .map(obj => {
-              return {
-                x: obj.position.x,
-                y: obj.position.y,
-                z: obj.position.z,
-                textura: Object.entries(textures).find(([key, tex]) => tex === obj.material.map)?.[0] || 'desconocida'
-              };
-            });
-          const json = JSON.stringify(data, null, 2);
-          navigator.clipboard.writeText(json)
-            .then(() => alert('JSON copiado al portapapeles'))
-            .catch(err => console.error('Error copiando JSON', err));
-        }
-      };
-
-      gui.add(exportParams, 'exportarJSON').name('📋 Copiar JSON cubos');
-
-
-      gui.addColor(waterParams, 'color').name('Color del agua').onChange((value) => {
-        water.material.uniforms['waterColor'].value.set(value);
-      });
-
-      gui.add(cubeParams, 'textura', Object.keys(textures)).name('Textura del cubo');
-
-      sky = new Sky();
-      sky.scale.setScalar(10000);
-      scene.add(sky);
-
-      sun = new THREE.Vector3();
-      const skyUniforms = sky.material.uniforms;
-      skyUniforms['turbidity'].value = 10;
-      skyUniforms['rayleigh'].value = 2;
-      skyUniforms['mieCoefficient'].value = 0.005;
-      skyUniforms['mieDirectionalG'].value = 0.8;
-
-      function setupMobileJoysticks() {
-        const leftBase = document.getElementById('left-joystick');
-        const leftKnob = document.getElementById('left-knob');
-        const rightBase = document.getElementById('right-joystick');
-        const rightKnob = document.getElementById('right-knob');
-        let leftActive = false;
-        let rightActive = false;
-        let leftStartX = 0, leftStartY = 0;
-        let rightStartX = 0, rightStartY = 0;
-        const maxDist = 50; // max distance knob can travel
-
-        function handleLeftMove(dx, dy) {
-          // clamp the displacement
-          const clampedX = Math.max(-maxDist, Math.min(maxDist, dx));
-          const clampedY = Math.max(-maxDist, Math.min(maxDist, dy));
-          // update knob position
-          leftKnob.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
-          // normalize to range -1..1 (invert Y so that upward drag moves forward)
-          mobileMoveX = clampedX / maxDist;
-          mobileMoveZ = clampedY / maxDist;
-        }
-
-        function handleRightMove(dx, dy) {
-          const clampedX = Math.max(-maxDist, Math.min(maxDist, dx));
-          const clampedY = Math.max(-maxDist, Math.min(maxDist, dy));
-          rightKnob.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
-          // map to yaw and pitch deltas; invert X so that dragging right turns right
-          mobileYawDelta = clampedX / maxDist;
-          mobilePitchDelta = clampedY / maxDist;
-        }
-
-        // left joystick events
-        leftBase.addEventListener('touchstart', (e) => {
-          const t = e.touches[0];
-          leftActive = true;
-          leftStartX = t.clientX;
-          leftStartY = t.clientY;
-        });
-        leftBase.addEventListener('touchmove', (e) => {
-          if (!leftActive) return;
-          e.preventDefault();
-          const t = e.touches[0];
-          const dx = t.clientX - leftStartX;
-          const dy = t.clientY - leftStartY;
-          handleLeftMove(dx, dy);
-        }, { passive: false });
-        leftBase.addEventListener('touchend', () => {
-          leftActive = false;
-          leftKnob.style.transform = 'translate(0px, 0px)';
-          mobileMoveX = 0;
-          mobileMoveZ = 0;
-        });
-
-        // right joystick events
-        rightBase.addEventListener('touchstart', (e) => {
-          const t = e.touches[0];
-          rightActive = true;
-          rightStartX = t.clientX;
-          rightStartY = t.clientY;
-        });
-        rightBase.addEventListener('touchmove', (e) => {
-          if (!rightActive) return;
-          e.preventDefault();
-          const t = e.touches[0];
-          const dx = t.clientX - rightStartX;
-          const dy = t.clientY - rightStartY;
-          handleRightMove(dx, dy);
-        }, { passive: false });
-        rightBase.addEventListener('touchend', () => {
-          rightActive = false;
-          rightKnob.style.transform = 'translate(0px, 0px)';
-          mobileYawDelta = 0;
-          mobilePitchDelta = 0;
-        });
-      }
-
-
-
-      function updateSun() {
-        const phi = THREE.MathUtils.degToRad(90 - parameters.elevation);
-        const theta = THREE.MathUtils.degToRad(parameters.azimuth);
-        sun.setFromSphericalCoords(1, phi, theta);
-        sky.material.uniforms['sunPosition'].value.copy(sun);
-        water.material.uniforms['sunDirection'].value.copy(sun).normalize();
-      }
-      updateSun();
+      /* Demo */
+      cargarDesdeJSON([{x:-210,y:10,z:-310,textura:'arena'},{x:-170,y:10,z:-370,textura:'arena'}]);
     }
 
-    function getSnappedPosition(position, size) {
-      return position.clone().divideScalar(size).floor().multiplyScalar(size).addScalar(size / 2);
-    }
+    /* ----- EVENTS ----- */
+    function onKeyDown(e){switch(e.code){case'KeyW':moveFlags.forward=true;break;case'KeyS':moveFlags.backward=true;break;case'KeyA':moveFlags.left=true;break;case'KeyD':moveFlags.right=true;break;case'KeyQ':moveFlags.up=true;break;case'KeyE':moveFlags.down=true;break;case'ShiftLeft':isShiftDown=true;break;}}
+    function onKeyUp(e){switch(e.code){case'KeyW':moveFlags.forward=false;break;case'KeyS':moveFlags.backward=false;break;case'KeyA':moveFlags.left=false;break;case'KeyD':moveFlags.right=false;break;case'KeyQ':moveFlags.up=false;break;case'KeyE':moveFlags.down=false;break;case'ShiftLeft':isShiftDown=false;break;}}
 
-    function onPointerMove(event) {
-      pointer.set((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1);
-      raycaster.setFromCamera(pointer, camera);
-      const intersects = raycaster.intersectObjects(objects, false);
-      if (intersects.length > 0) {
-        const intersect = intersects[0];
-        const snapped = getSnappedPosition(intersect.point.add(intersect.face.normal), voxelSize);
-        rollOverMesh.position.copy(snapped);
-      }
-    }
+    function onPointerMove(e){pointer.set((e.clientX/window.innerWidth)*2-1,-(e.clientY/window.innerHeight)*2+1);raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(objects,false)[0];if(hit){rollOverMesh.position.copy(snap(hit.point.add(hit.face.normal)));}}
 
-    function onPointerDown(event) {
-      pointer.set((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1);
-      raycaster.setFromCamera(pointer, camera);
-      const intersects = raycaster.intersectObjects(objects, false);
-      if (intersects.length > 0) {
-        const intersect = intersects[0];
-        if (isShiftDown && intersect.object !== plane) {
-          scene.remove(intersect.object);
-          const index = objects.indexOf(intersect.object);
-          if (index !== -1) objects.splice(index, 1);
-        } else {
-          const snapped = rollOverMesh.position.clone();
-          const exists = objects.some(obj => obj !== plane && obj.position.equals(snapped));
-          if (!exists) {
-            const voxel = new THREE.Mesh(
-              cubeGeo,
-              new THREE.MeshLambertMaterial({ map: textures[cubeParams.textura], color: 0xffffff })
-            );
-            voxel.position.copy(snapped);
-            scene.add(voxel);
-            objects.push(voxel);
-          }
-        }
-      }
-    }
+    function onPointerDown(e){pointer.set((e.clientX/window.innerWidth)*2-1,-(e.clientY/window.innerHeight)*2+1);raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(objects,false)[0];if(!hit)return;if(isShiftDown&&hit.object!==plane){scene.remove(hit.object);objects.splice(objects.indexOf(hit.object),1);return;}const pos=rollOverMesh.position.clone();if(!objects.some(o=>o!==plane&&o.position.equals(pos))){const voxel=new THREE.Mesh(cubeGeo,new THREE.MeshLambertMaterial({map:textures[cubeParams.textura],color:0xffffff}));voxel.position.copy(pos);scene.add(voxel);objects.push(voxel);}}
 
-    function onKeyDown(event) {
-      switch (event.code) {
-        case 'KeyS': move.forward = true; break;
-        case 'KeyW': move.backward = true; break;
-        case 'KeyA': move.left = true; break;
-        case 'KeyD': move.right = true; break;
-        case 'KeyQ': move.up = true; break;
-        case 'KeyE': move.down = true; break;
-        case 'ShiftLeft': isShiftDown = true; break;
-      }
-    }
+    function onResize(){camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);}
 
-    function onKeyUp(event) {
-      switch (event.code) {
-        case 'KeyS': move.forward = false; break;
-        case 'KeyW': move.backward = false; break;
-        case 'KeyA': move.left = false; break;
-        case 'KeyD': move.right = false; break;
-        case 'KeyQ': move.up = false; break;
-        case 'KeyE': move.down = false; break;
-        case 'ShiftLeft': isShiftDown = false; break;
-      }
-    }
+    /* ----- JOYSTICKS ----- */
+    function setupMobileJoysticks(){const lBase=document.getElementById('left-joystick');const lKnob=document.getElementById('left-knob');const rBase=document.getElementById('right-joystick');const rKnob=document.getElementById('right-knob');const max=50;const clamp=(v)=>Math.max(-max,Math.min(max,v));const reset=k=>k.style.transform='translate(-50%,-50%)';let lSX=0,lSY=0,lAct=false;lBase.addEventListener('touchstart',e=>{const t=e.touches[0];lAct=true;lSX=t.clientX;lSY=t.clientY;},{passive:true});lBase.addEventListener('touchmove',e=>{if(!lAct)return;e.preventDefault();const t=e.touches[0];const dx=clamp(t.clientX-lSX);const dy=clamp(t.clientY-lSY);lKnob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;mobileMoveX=dx/max;mobileMoveZ=dy/max;},{passive:false});lBase.addEventListener('touchend',()=>{lAct=false;reset(lKnob);mobileMoveX=mobileMoveZ=0;});let rSX=0,rSY=0,rAct=false;rBase.addEventListener('touchstart',e=>{const t=e.touches[0];rAct=true;rSX=t.clientX;rSY=t.clientY;},{passive:true});rBase.addEventListener('touchmove',e=>{if(!rAct)return;e.preventDefault();const t=e.touches[0];const dx=clamp(t.clientX-rSX);const dy=clamp(t.clientY-rSY);rKnob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;mobileYawDelta=dx/max;mobilePitchDelta=dy/max;},{passive:false});rBase.addEventListener('touchend',()=>{rAct=false;reset(rKnob);mobileYawDelta=mobilePitchDelta=0;});}
 
-    function onWindowResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
+    /* ----- HELPERS ----- */
+    function snap(v){return v.clone().divideScalar(voxelSize).floor().multiplyScalar(voxelSize).addScalar(voxelSize/2);}    
+    function cargarDesdeJSON(arr){arr.forEach(({x,y,z,textura})=>{const voxel=new THREE.Mesh(cubeGeo,new THREE.MeshLambertMaterial({map:textures[textura]||null,color:0xffffff}));voxel.position.set(x,y,z);scene.add(voxel);objects.push(voxel);});}    
+    function exportCubes(){const data=objects.filter(o=>o!==plane).map(o=>{const key=Object.entries(textures).find(([k,v])=>v===o.material.map)?.[0]||'desconocida';return{ x:o.position.x,y:o.position.y,z:o.position.z,textura:key };});navigator.clipboard.writeText(JSON.stringify(data,null,2)).then(()=>alert('JSON copiado')).catch(console.error);}    
+    function updateSun(){const phi=THREE.MathUtils.degToRad(90-sunParams.elevation);const theta=THREE.MathUtils.degToRad(sunParams.azimuth);sun.setFromSphericalCoords(1,phi,theta);sky.material.uniforms.sunPosition.value.copy(sun);water.material.uniforms.sunDirection.value.copy(sun).normalize();}
 
-
-    function animate() {
-      requestAnimationFrame(animate);
-      const minX = -500, maxX = 500;
-      const minZ = -500, maxZ = 500;
-      const delta = 0.05;
-
-      if (controls.isLocked) {
-        velocity.set(0, 0, 0);
-        if (move.forward) velocity.z -= speed * delta;
-        if (move.backward) velocity.z += speed * delta;
-        if (move.left) velocity.x -= speed * delta;
-        if (move.right) velocity.x += speed * delta;
-        if (move.up) velocity.y += speed * delta;
-        if (move.down) velocity.y -= speed * delta;
-
-        controls.moveRight(velocity.x * delta);
-        controls.moveForward(velocity.z * delta);
-        controls.getObject().position.y += velocity.y * delta;
-      }
-
-      if (water) {
-        water.material.uniforms['time'].value += 1.0 / 60.0;
-      }
-
-      if (isMobile) {
-        const rotSpeed = 0.3;
-        yaw -= mobileYawDelta * rotSpeed * delta;
-        pitch -= mobilePitchDelta * rotSpeed * delta;
-        const maxPitch = Math.PI / 2 - 0.1;
-        pitch = Math.max(-maxPitch, Math.min(maxPitch, pitch));
-        camera.rotation.order = 'YXZ';
-        camera.rotation.y = yaw;
-        camera.rotation.x = pitch;
-
-        const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-        const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-        const speed = 5.0;
-        camera.position.addScaledVector(forward, mobileMoveZ * speed * delta);
-        camera.position.addScaledVector(right, mobileMoveX * speed * delta);
-
-        camera.position.x = Math.max(minX, Math.min(maxX, camera.position.x));
-        camera.position.z = Math.max(minZ, Math.min(maxZ, camera.position.z));
-        camera.position.y = 5;
-      }
-
-      renderer.render(scene, camera);
-    }
+    /* ----- LOOP ----- */
+    function animate(){requestAnimationFrame(animate);const dt=clock.getDelta();if(!isMobile&&controls.isLocked){velocity.set(0,0,0);if(moveFlags.forward)velocity.z-=DESKTOP_SPEED*dt;if(moveFlags.backward)velocity.z+=DESKTOP_SPEED*dt;if(moveFlags.left)velocity.x-=DESKTOP_SPEED*dt;if(moveFlags.right)velocity.x+=DESKTOP_SPEED*dt;if(moveFlags.up)velocity.y+=DESKTOP_SPEED*dt;if(moveFlags.down)velocity.y-=DESKTOP_SPEED*dt;controls.moveRight(velocity.x*dt);controls.moveForward(velocity.z*dt);controls.getObject().position.y+=velocity.y*dt;}if(isMobile){const lookSpeed=2.5;yaw-=mobileYawDelta*lookSpeed*dt;pitch-=mobilePitchDelta*lookSpeed*dt;pitch=THREE.MathUtils.clamp(pitch,-Math.PI/2+0.1,Math.PI/2-0.1);camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch;const fwd=new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0),yaw);const right=new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0),yaw);camera.position.addScaledVector(fwd,mobileMoveZ*MOBILE_SPEED*dt);camera.position.addScaledVector(right,mobileMoveX*MOBILE_SPEED*dt);camera.position.y=5;camera.position.x=THREE.MathUtils.clamp(camera.position.x,-500,500);camera.position.z=THREE.MathUtils.clamp(camera.position.z,-500,500);}if(water)water.material.uniforms.time.value+=dt;renderer.render(scene,camera);}  
   </script>
 </body>
 
