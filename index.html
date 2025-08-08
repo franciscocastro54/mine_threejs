@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Francisco Castro Zuleta | DESARROLLADOR XR (VR + Selector de Texturas)</title>
+  <title>Francisco Castro Zuleta | DESARROLLADOR XR (VR + Texturas + JSON + Locomoción)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <style>
     body { margin:0; overflow:hidden; background:#f0f0f0; }
@@ -30,9 +30,9 @@
 <body>
   <div id="blocker">
     <div>
-      <p><b>Click para comenzar (modo desktop)</b></p>
-      <p>W A S D para moverse, mouse para mirar • Click: añadir • Shift+Click: borrar • Q/E subir/bajar</p>
-      <p>En VR: menú 3D con Añadir/Borrar, Texturas (miniaturas), Importar/Exportar JSON, Salir</p>
+      <p><b>Click para comenzar (desktop)</b></p>
+      <p>W A S D moverse • Q/E subir/bajar • Click añadir • Shift+Click borrar</p>
+      <p>En VR: stick izq = locomoción, stick der = giro por pasos, pinch/trigger para colocar/borrar, menú 3D para opciones</p>
     </div>
   </div>
 
@@ -61,7 +61,6 @@
     let rollOverMesh, cubeGeo;
     const objects = [];          // plano + cubos
     const cubesOnly = new Set();
-
     let water, sky, sun;
 
     // Texturas
@@ -91,13 +90,12 @@
     let currentTextureIndex = Math.max(0, textureKeys.indexOf('madera'));
     let deleteMode = false;
 
-    // VR entradas
+    // VR entradas / locomoción
     const controllerModelFactory = new XRControllerModelFactory();
     const controllers = []; // {grip, controller, hand, pointer}
     const tmpMatrix = new THREE.Matrix4();
 
-    // VR UI
-    const vrButtons = []; // elementos clicables (botones y miniaturas)
+    const vrButtons = []; // todos los meshes clicables (botones y miniaturas)
     let texSwatchMesh = null;
     let texNameText = null;
 
@@ -106,6 +104,13 @@
     let texTiles = [];     // miniaturas (meshes) clicables
     let texPage = 0;       // página actual del grid
     const TEX_PER_PAGE = 9;
+
+    // Locomoción VR
+    const VR_MOVE_SPEED_MPS = 2.0; // metros/seg
+    const VR_TURN_SNAP_RAD = THREE.MathUtils.degToRad(30);
+    const VR_DEADZONE = 0.2;
+    let vrTurnCooldown = 0; // seg
+    let leftCtrl = null, rightCtrl = null;
 
     init();
     animate();
@@ -177,7 +182,7 @@
       controls.addEventListener('lock', () => document.getElementById('blocker').style.display = 'none');
       controls.addEventListener('unlock', () => document.getElementById('blocker').style.display = 'flex');
 
-      // Botón XR (con hand-tracking)
+      // Botón XR (con hand-tracking y local-floor)
       document.body.appendChild(VRButton.createButton(renderer, {
         requiredFeatures: ['local-floor', 'hand-tracking']
       }));
@@ -220,6 +225,18 @@
         const controller = renderer.xr.getController(i);
         controller.add(makeControllerRay());
         controller.addEventListener('selectstart', onXRSelect);
+        // --- Locomoción: detectar gamepad y handedness
+        controller.addEventListener('connected', (e) => {
+          controller.userData.handedness = e.data.handedness;
+          controller.userData.gamepad = e.data.gamepad || null;
+          if (controller.userData.handedness === 'left')  leftCtrl  = controller;
+          if (controller.userData.handedness === 'right') rightCtrl = controller;
+        });
+        controller.addEventListener('disconnected', () => {
+          if (controller.userData.handedness === 'left')  leftCtrl  = null;
+          if (controller.userData.handedness === 'right') rightCtrl = null;
+          controller.userData.gamepad = null;
+        });
         scene.add(controller);
 
         const hand = renderer.xr.getHand(i);
@@ -286,7 +303,7 @@
       texNameText.position.set(0, 0.06, 0.0065);
       plate.add(texNameText);
 
-      // Botón para abrir/cerrar panel de miniaturas
+      // Abrir/cerrar panel de miniaturas
       makeButton('Texturas…', 0xe67e22, 0.0, () => {
         texPanel.visible = !texPanel.visible;
         if (texPanel.visible) updateTextureGrid();
@@ -312,10 +329,8 @@
 
     /* ====== PANEL 3×3 DE MINIATURAS ====== */
     function buildTextureGridPanel() {
-      // Grupo colocado frente a la cámara, un poco más a la derecha
       const g = new THREE.Group();
       g.position.set(0.0, 1.1, -1.05);
-      g.rotation.y = 0;
 
       const plate = new THREE.Mesh(
         new THREE.PlaneGeometry(0.55, 0.70),
@@ -323,12 +338,10 @@
       );
       g.add(plate);
 
-      // Título
       const title = createText('Seleccionar textura', 0.045);
       title.position.set(0, 0.30, 0.0065);
       plate.add(title);
 
-      // Botones de paginación y cerrar
       const makeBtn = (label, x, y, action, w=0.12, h=0.08, color=0x666666) => {
         const btn = new THREE.Mesh(
           new THREE.BoxGeometry(w, h, 0.012),
@@ -373,7 +386,6 @@
           tile.position.set(0, 0, 0.001);
           frame.add(tile);
 
-          // Borde de selección
           const border = new THREE.Mesh(
             new THREE.PlaneGeometry(0.125, 0.125),
             new THREE.MeshBasicMaterial({ color: 0xffff00, transparent:true, opacity:0.0 })
@@ -383,8 +395,8 @@
 
           tile.userData.border = border;
           texTiles.push(tile);
-          vrButtons.push(frame); // hacemos clic en el frame (padre) para facilidad
-          frame.userData.tileRef = tile; // referencia para recuperar index
+          vrButtons.push(frame);
+          frame.userData.tileRef = tile;
         }
       }
 
@@ -392,7 +404,6 @@
     }
 
     function updateTextureGrid() {
-      // Rellena 3×3 con las texturas de la página actual
       const start = texPage * TEX_PER_PAGE;
       for (let i = 0; i < texTiles.length; i++) {
         const tile = texTiles[i];
@@ -405,17 +416,13 @@
           tile.material.map = textures[key];
           tile.material.needsUpdate = true;
 
-          // Marcar selección actual
           const isSelected = (texIndex === currentTextureIndex);
           tile.userData.border.material.opacity = isSelected ? 0.9 : 0.0;
 
-          // Guardamos acción de clic en el frame contenedor
           tile.parent.userData.action = () => {
             currentTextureIndex = texIndex;
-            // Actualiza selección visual
             texTiles.forEach(t => t.userData.border.material.opacity = 0.0);
             tile.userData.border.material.opacity = 0.9;
-            // Sincroniza swatch y nombre en menú principal
             texSwatchMesh.material.map = textures[textureKeys[currentTextureIndex]];
             texSwatchMesh.material.needsUpdate = true;
             texNameText.text = textureKeys[currentTextureIndex];
@@ -474,9 +481,7 @@
     }
 
     function cargarDesdeJSON(arr) {
-      // borrar cubos actuales
       for (const c of Array.from(cubesOnly)) deleteVoxel(c);
-      // crear
       arr.forEach(({ x, y, z, textura }) => {
         const mat = new THREE.MeshLambertMaterial({ map: textures[textura] || null });
         const voxel = new THREE.Mesh(cubeGeo, mat);
@@ -556,17 +561,17 @@
       }
     }
 
-    /* ====== INTERACCIÓN VR ====== */
+    /* ====== INTERACCIÓN VR (pinch/trigger) ====== */
     function onXRSelect(ev) {
       const controller = ev.target;
       const hit = controllerRaycast(controller);
       if (!hit) return;
 
-      // ¿tocó un botón/miniatura? (el botón puede ser el mesh o su hijo)
+      // ¿tocó un botón/miniatura?
       const targetBtn = findVRButtonFromHit(hit.object);
       if (targetBtn?.userData?.action) { targetBtn.userData.action(); return; }
 
-      // Interacción con escena
+      // Escena
       if (deleteMode && hit.object !== plane) {
         deleteVoxel(hit.object);
       } else {
@@ -605,18 +610,14 @@
       rayDir.applyMatrix4(tmpMatrix.copy(controller.matrixWorld).extractRotation(controller.matrixWorld)).normalize();
 
       const rc = new THREE.Raycaster(rayOrigin, rayDir, 0, 10);
-      // botones/miniaturas primero
-      const uiHits = rc.intersectObjects(vrButtons, true);
+      const uiHits = rc.intersectObjects(vrButtons, true); // UI primero
       if (uiHits.length) return uiHits[0];
-      // luego escena
-      const hits = rc.intersectObjects(objects, false);
+      const hits = rc.intersectObjects(objects, false);     // escena
       return hits[0];
     }
 
     function handPointerIntersect(handPointer) {
-      let closest = null;
-      let dist = Infinity;
-
+      let closest = null, dist = Infinity;
       for (const b of vrButtons) {
         const h = handPointer.intersectObject(b, true);
         if (h && h.length && h[0].distance < dist) { dist = h[0].distance; closest = h[0]; }
@@ -630,15 +631,48 @@
     }
 
     function findVRButtonFromHit(obj) {
-      // El objetivo puede ser el frame (botón) o un hijo (texto/tile)
       let cur = obj;
       while (cur) {
         if (vrButtons.includes(cur)) return cur;
-        // si es un frame de miniatura, reenrutar a su acción de tile
-        if (cur.userData?.tileRef && cur.userData?.action) return cur;
+        if (cur.userData?.tileRef && cur.userData?.action) return cur; // frame de miniatura
         cur = cur.parent;
       }
       return null;
+    }
+
+    /* ====== LOCOMOCIÓN VR (sticks) ====== */
+    function applyDeadzone(v, dz = VR_DEADZONE) { return Math.abs(v) < dz ? 0 : v; }
+    function getAxes(ctrl) { const gp = ctrl?.userData?.gamepad; return gp?.axes || null; }
+
+    function processVRLocomotion(dt) {
+      const xrCam = renderer.xr.getCamera(camera);
+      const rig   = xrCam.parent; // mover SIEMPRE el rig, no la cámara directa
+
+      // Stick izquierdo: traslación
+      const aL = getAxes(leftCtrl);
+      if (aL) {
+        const lx = applyDeadzone(aL[0] || 0);
+        const ly = applyDeadzone(aL[1] || 0); // suele ser negativo hacia delante
+        if (lx !== 0 || ly !== 0) {
+          const yaw = new THREE.Euler().setFromQuaternion(xrCam.quaternion, 'YXZ').y;
+          const forward = new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0), yaw).normalize();
+          const right   = new THREE.Vector3(1,0, 0).applyAxisAngle(new THREE.Vector3(0,1,0), yaw).normalize();
+          rig.position.addScaledVector(forward, (-ly) * VR_MOVE_SPEED_MPS * dt);
+          rig.position.addScaledVector(right,    ( lx) * VR_MOVE_SPEED_MPS * dt);
+
+          // Si no quieres “volar”, fija la Y (ajusta 0 por tu altura/plano)
+          // rig.position.y = 0;
+        }
+      }
+
+      // Stick derecho: snap-turn
+      if (vrTurnCooldown > 0) vrTurnCooldown -= dt;
+      const aR = getAxes(rightCtrl);
+      if (aR && vrTurnCooldown <= 0) {
+        const rx = applyDeadzone(aR[0] || 0);
+        if (rx > 0.8) { rig.rotateY(-VR_TURN_SNAP_RAD); vrTurnCooldown = 0.25; } // derecha
+        else if (rx < -0.8) { rig.rotateY( VR_TURN_SNAP_RAD); vrTurnCooldown = 0.25; } // izquierda
+      }
     }
 
     /* ====== LOOP ====== */
@@ -661,6 +695,9 @@
 
       // VR
       renderer.xr.updateCamera(camera);
+      if (renderer.xr.isPresenting) {
+        processVRLocomotion(dt);
+      }
       processHands();
 
       if (water) water.material.uniforms.time.value += dt;
